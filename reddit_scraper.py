@@ -50,11 +50,13 @@ def scrapeVideos(sub_name, sub_sort, scrape_limit, quality):
     saveCount = 0
 
     print(f" > Scraping {scrape_limit} posts from r/{sub_name} for videos...")
-
+    
     for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
-        permaURL = "https://www.reddit.com/"+submission.permalink
-        file = RedDownloader.Download(url = permaURL , output=sub_name + "-" + submission.id , destination="videos/" , quality = quality)
-        print(permaURL)
+        if "v.redd.it" in submission.url.lower():
+            permaURL = "https://www.reddit.com/"+submission.permalink
+            RedDownloader.Download(url = permaURL , output=sub_name + "-" + submission.title[:15] + "-" + submission.id , destination="videos/" , quality = quality)
+            # print(permaURL)
+            saveCount += 1
     print(f" > Saved {saveCount} video(s).")
         
 def menu():
@@ -112,7 +114,7 @@ def main():
             userSort = int(input("Enter sort method: "))
             userLimit = int(input("How many posts to scrape: "))
 
-            print("Avaliable options to choose from are 144, 240, 360, 480, 720, 1080")
+            print("Avaliable options to choose from are 360, 480, 720, 1080")
             print("If a video file in specified resolution is not found it will try for a lower resolution")
 
             userQuality = int(input("Enter video quality: "))
