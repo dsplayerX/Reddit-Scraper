@@ -1,29 +1,37 @@
 # REDDIT SCRAPER by dsplayerX
 
-
-# TODO
-# > different image types
-# > save galleries?
-# > save gifs?
-
-
 import praw
 import requests
 import os
+import base64
 from RedDownloader import RedDownloader
-
 
 def initReddit():
 
     global reddit
 
-    myid = open("pass.txt", "r").read()
-    mysecret = open("shh.txt", "r").read()
-
+    if os.path.exists(os.getcwd() + "/creds.txt"):
+        encoded_msg = open("creds.txt", "r").read()
+        bs64_bytes = encoded_msg.encode('ascii')
+        msg_bytes = base64.b64decode(bs64_bytes)
+        decoded_msg = msg_bytes.decode('ascii')
+        access_secret = decoded_msg.splitlines()
+        userID = access_secret[0]
+        userSecret = access_secret[1]
+    else:
+        userID = input("Enter your Client ID: ")
+        userSecret = input("Enter your Client Secret: ")
+        access_secret = userID + "\n" + userSecret
+        msg_bytes = access_secret.encode('ascii')
+        bs64_bytes = base64.b64encode(msg_bytes)
+        encoded_msg = bs64_bytes.decode('ascii')
+        file = open("creds.txt", "w")
+        file.write(encoded_msg)
+        file.close()
 
     reddit = praw.Reddit(
-        client_id=myid,
-        client_secret=mysecret,
+        client_id=userID,
+        client_secret=userSecret,
         user_agent="bot v1",
         username="",
         password="",
@@ -31,44 +39,98 @@ def initReddit():
 
 
 def scrapePosts(sub_name, sub_sort, scrape_limit):
-    subreddit = reddit.subreddit(sub_name)
-  
-    saveCount = 0
+    try:
+        subreddit = reddit.subreddit(sub_name)
+    
+        postCount = 0
 
-    print(f" > Scraping {scrape_limit} posts from r/{sub_name}...")
+        if os.path.exists(os.getcwd() + "/savedscrapes"):
+            pass
+        else:
+            os.mkdir(os.getcwd() + "/savedscrapes")
 
-    for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
-        saveCount += 1
-        permaURL = "https://www.reddit.com/"+submission.permalink
-        print("\n > " + str(saveCount) + ". " + submission.title)
-        print("   - " + permaURL)
+        print(f" > Scraping {scrape_limit} posts from r/{sub_name}...")
+
+        with open("savedscrapes/" + sub_name + "-" + str(sub_sort) + "-" + str(scrape_limit) + ".txt", "a", encoding="utf-8") as file:
+            for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
+                postCount += 1
+                permaURL = "https://www.reddit.com/"+submission.permalink
+                print("\n > " + str(postCount) + ". " + submission.title)
+                print("   - " + permaURL)
+
+                file.write("\n\n" + str(postCount) + ". " + submission.title)
+                file.write(" - " + permaURL)
+
+                # print(submission.url)
+        file.close()
+
+        print(f"\n > Found {postCount} post(s).")
+
+        userSave = input("\nSave scraped posts? (y/n) : ")
+        if userSave.lower() == "y" or userSave.lower() == "yes":               
+            print(" > Saved data to a text file successfully!")
+        else:
+            if os.path.exists(os.getcwd() + "/savedscrapes/" + sub_name + "-" + str(sub_sort) + "-" + str(scrape_limit) + ".txt"):
+                os.remove(os.getcwd() + "/savedscrapes/" + sub_name + "-" + str(sub_sort) + "-" + str(scrape_limit) + ".txt")
+            else:
+                pass
+            print(" > Removed saved cache...")
+
+    except:
+        print("ERROR!")
 
 
 def scrapeImages(sub_name, sub_sort, scrape_limit):
 
+    if os.path.exists(os.getcwd() + "/images"):
+        pass
+    else:
+        os.mkdir(os.getcwd() + "/images")
+
     subreddit = reddit.subreddit(sub_name)
   
-    saveCount = 0
+    imageCount = 0
+    galleryCount = 0
 
     print(f" > Scraping {scrape_limit} posts from r/{sub_name} for images...")
 
     for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
-        if "jpg" in submission.url.lower() or "png" in submission.url.lower():
-            image = requests.get(submission.url)
-            file = open("images/" + sub_name + "-" + submission.id + ".png", "wb")
-            file.write(image.content)
-            file.close()
-            saveCount += 1
-    print(f" > Found {saveCount} image(s).")
-    if saveCount > 0:
-        print(f" > Saved {saveCount} image(s).")
+        subURL = submission.url
+        if "i.redd.it" in subURL.lower():  
+            if "jpg" in subURL.lower() or "jpeg" in subURL.lower():
+                image = requests.get(subURL)
+                with open("images/" + sub_name + "-" + submission.id + ".jpg", "wb") as file:
+                    file.write(image.content)
+                file.close()
+                imageCount += 1
+            elif "png" in subURL.lower():
+                image = requests.get(subURL)
+                with open("images/" + sub_name + "-" + submission.id + ".png", "wb") as file:
+                    file.write(image.content)
+                file.close()
+                imageCount += 1
+        elif "www.reddit.com/gallery" in subURL.lower():
+            print()
+            RedDownloader.Download(url = subURL , output=sub_name + "-" + submission.id , destination="images/")
+            galleryCount += 1
+
+    print(f"\n > Found {imageCount} image(s).")
+    if imageCount > 0:
+        print(f" > Saved {imageCount} image(s).")
+    if galleryCount > 0:
+        print(f"\n > Found {galleryCount} gallery(s).")
 
 
 def scrapeVideos(sub_name, sub_sort, scrape_limit, quality):
 
+    if os.path.exists(os.getcwd() + "/videos"):
+        pass
+    else:
+        os.mkdir(os.getcwd() + "/videos")
+
     subreddit = reddit.subreddit(sub_name)
 
-    saveCount = 0
+    videoCount = 0
 
     print(f" > Scraping {scrape_limit} posts from r/{sub_name} for videos...")
     
@@ -77,10 +139,8 @@ def scrapeVideos(sub_name, sub_sort, scrape_limit, quality):
             permaURL = "https://www.reddit.com/"+submission.permalink
             RedDownloader.Download(url = permaURL , output=sub_name + "-" + submission.id , destination="videos/" , quality = quality)
             # print(permaURL)
-            saveCount += 1
-    print(f" > Found {saveCount} video(s).")
-    if saveCount > 0:
-        print(f" > Saved {saveCount} video(s).")
+            videoCount += 1
+    print(f" > Found {videoCount} video(s).")
 
         
 def menu():
