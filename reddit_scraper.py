@@ -1,3 +1,12 @@
+# REDDIT SCRAPER by dsplayerX
+
+
+# TODO
+# > different image types
+# > save galleries?
+# > save gifs?
+
+
 import praw
 import requests
 import os
@@ -21,8 +30,18 @@ def initReddit():
         )
 
 
-def scrapePosts(reddit):
-    pass        
+def scrapePosts(sub_name, sub_sort, scrape_limit):
+    subreddit = reddit.subreddit(sub_name)
+  
+    saveCount = 0
+
+    print(f" > Scraping {scrape_limit} posts from r/{sub_name}...")
+
+    for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
+        saveCount += 1
+        permaURL = "https://www.reddit.com/"+submission.permalink
+        print("\n > " + str(saveCount) + ". " + submission.title)
+        print("   - " + permaURL)
 
 
 def scrapeImages(sub_name, sub_sort, scrape_limit):
@@ -36,11 +55,13 @@ def scrapeImages(sub_name, sub_sort, scrape_limit):
     for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
         if "jpg" in submission.url.lower() or "png" in submission.url.lower():
             image = requests.get(submission.url)
-            file = open("images/" + sub_name + "-" + submission.title[:15] + "-" + submission.id + ".png", "wb")
+            file = open("images/" + sub_name + "-" + submission.id + ".png", "wb")
             file.write(image.content)
             file.close()
             saveCount += 1
-    print(f" > Saved {saveCount} image(s).")
+    print(f" > Found {saveCount} image(s).")
+    if saveCount > 0:
+        print(f" > Saved {saveCount} image(s).")
 
 
 def scrapeVideos(sub_name, sub_sort, scrape_limit, quality):
@@ -54,37 +75,42 @@ def scrapeVideos(sub_name, sub_sort, scrape_limit, quality):
     for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
         if "v.redd.it" in submission.url.lower():
             permaURL = "https://www.reddit.com/"+submission.permalink
-            RedDownloader.Download(url = permaURL , output=sub_name + "-" + submission.title[:15] + "-" + submission.id , destination="videos/" , quality = quality)
+            RedDownloader.Download(url = permaURL , output=sub_name + "-" + submission.id , destination="videos/" , quality = quality)
             # print(permaURL)
             saveCount += 1
-    print(f" > Saved {saveCount} video(s).")
+    print(f" > Found {saveCount} video(s).")
+    if saveCount > 0:
+        print(f" > Saved {saveCount} video(s).")
+
         
 def menu():
-    print("Reddit Scraper")
+    print("\n----------------")
+    print(" Reddit Scraper ")
+    print("----------------")
     print("1. Post URLs")
     print("2. Images")
     print("3. Videos")
     print("q. Quit")
-    userChoice = input("What do you want to scrape? ")
+    userChoice = input("\nWhat do you want to scrape? ")
     return userChoice
 
 
 def printSortMethods():
-    print(" 1.controversial")
-    print(" 2.gilded")
-    print(" 3.hot")
-    print(" 4.new")
-    print(" 5.rising")
+    print(" 1.hot")
+    print(" 2.new")
+    print(" 3.rising")
+    print(" 4.gilded")
+    print(" 5.controversial")    
     print(" 6.top of all time")
 
     
 def getSortedSubreddit(subreddit, sort):
     sub_sort_dict = {
-        1 : subreddit.controversial,
-        2 : subreddit.gilded,
-        3 : subreddit.hot,
-        4 : subreddit.new,
-        5 : subreddit.rising,
+        1 : subreddit.hot,
+        2 : subreddit.new,
+        3 : subreddit.rising,
+        4 : subreddit.gilded,
+        5 : subreddit.controversial,
         6 : subreddit.top
     }
     return sub_sort_dict[sort]
@@ -99,7 +125,11 @@ def main():
     while isRunning:
         userChoice = menu()
         if userChoice == "1":
-            pass
+            userSub = input("Enter subreddit name: ")
+            printSortMethods()
+            userSort = int(input("Enter sort method: "))
+            userLimit = int(input("How many posts to scrape: "))
+            scrapePosts(userSub, userSort, userLimit)
 
         elif userChoice == "2":
             userSub = input("Enter subreddit name: ")
