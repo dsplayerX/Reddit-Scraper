@@ -2,3 +2,4 @@ images/
 videos/
 savedscrapes/
 creds.txt
+__pycache__/
