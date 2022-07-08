@@ -1,8 +1,9 @@
 import praw
+import prawcore
 import requests
 import os
 from RedDownloader import RedDownloader
-from config_cred import *
+from data.config_cred import *
 
 # REDDIT SCRAPER by dsplayerX
 
@@ -10,7 +11,7 @@ def initReddit():
 
     global reddit
 
-    if os.path.exists(os.getcwd() + "/creds.txt"):
+    if os.path.exists(os.getcwd() + "/data/creds.txt"):
         creds = decodeCreds()
         userID = creds[0]
         userSecret = creds[1]
@@ -54,9 +55,11 @@ def scrapePosts(sub_name, sub_sort, scrape_limit):
                 file.write("\n\n" + str(postCount) + ". " + submission.title)
                 file.write(" - " + permaURL)
         file.close()
-    except:
-        pass
-    print(f"\n > Found {postCount} post(s).")
+        print(f"\n > Found {postCount} post(s).")
+    except (prawcore.exceptions.NotFound, prawcore.exceptions.Redirect):
+        print(">> ERROR: Invalid Subreddit!")
+    except (praw.exceptions.PRAWException, prawcore.exceptions.PrawcoreException) as e:
+        print(">> ERROR: Reddit API Error - " + e)
 
     userSave = input("\nSave scraped posts? (y/n) : ")
     if userSave.lower() == "y" or userSave.lower() == "yes":               
@@ -102,8 +105,10 @@ def scrapeImages(sub_name, sub_sort, scrape_limit):
                 print()
                 RedDownloader.Download(url = subURL , output=sub_name + "-" + submission.id , destination="images/")
                 galleryCount += 1
-    except:
-        pass
+    except (prawcore.exceptions.NotFound, prawcore.exceptions.Redirect):
+        print(">> ERROR: Invalid Subreddit!")
+    except (praw.exceptions.PRAWException, prawcore.exceptions.PrawcoreException) as e:
+        print(">> ERROR: Reddit API Error - " + e)
 
     print(f"\n > Found {imageCount} image(s).")
     if imageCount > 0:
@@ -124,28 +129,33 @@ def scrapeVideos(sub_name, sub_sort, scrape_limit, quality):
     videoCount = 0
 
     print(f" > Scraping {scrape_limit} posts from r/{sub_name} for videos...")
-    
-    for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
-        try:
-            if "v.redd.it" in submission.url.lower():
-                permaURL = "https://www.reddit.com/"+submission.permalink
-                RedDownloader.Download(url = permaURL , output=sub_name + "-" + submission.id , destination="videos/" , quality = quality)
-                # print(permaURL)
-                videoCount += 1
-        except:
-            pass
+    try:
+        for submission in getSortedSubreddit(subreddit, sub_sort)(limit = scrape_limit):
+            try:
+                if "v.redd.it" in submission.url.lower():
+                    permaURL = "https://www.reddit.com/"+submission.permalink
+                    RedDownloader.Download(url = permaURL , output=sub_name + "-" + submission.id , destination="videos/" , quality = quality)
+                    # print(permaURL)
+                    videoCount += 1
+            except:
+                print(">> ERROR: Video Downloading Failed!")
+    except (prawcore.exceptions.NotFound, prawcore.exceptions.Redirect):
+        print(">> ERROR: Invalid Subreddit!")
+    except (praw.exceptions.PRAWException, prawcore.exceptions.PrawcoreException) as e:
+        print(">> ERROR: Reddit API Error - " + e)
+
     print(f" > Found {videoCount} video(s).")
 
         
 def menuChoice():
-    print("\n----------------")
-    print(" Reddit Scraper ")
-    print("----------------")
-    print("Select what you want to do.")
-    print(" 1. Scrape Post URLs")
+    print("\n------------------")
+    print("| Reddit Scraper |")
+    print("------------------")
+    print("\nSelect what you want to do.")
+    print("\n 1. Scrape Post URLs")
     print(" 2. Scrape Images")
     print(" 3. Scrape Videos")
-    print(" q. Quit\n")
+    print("\n q. Quit\n")
 
     userChoices = ["1", "2", "3", "q"]
     while True:

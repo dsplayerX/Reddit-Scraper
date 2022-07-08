@@ -1,5 +1,6 @@
 images/
 videos/
 savedscrapes/
-creds.txt
 __pycache__/
+data/__pycache__/
+data/creds.txt
