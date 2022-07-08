@@ -101,6 +101,12 @@ def scrapeImages(sub_name, sub_sort, scrape_limit):
                         file.write(image.content)
                     file.close()
                     imageCount += 1
+                elif "gif" in subURL.lower():
+                    image = requests.get(subURL)
+                    with open("images/" + sub_name + "-" + submission.id + ".gif", "wb") as file:
+                        file.write(image.content)
+                    file.close()
+                    imageCount += 1
             elif "www.reddit.com/gallery" in subURL.lower():
                 print()
                 RedDownloader.Download(url = subURL , output=sub_name + "-" + submission.id , destination="images/")
@@ -109,6 +115,8 @@ def scrapeImages(sub_name, sub_sort, scrape_limit):
         print(">> ERROR: Invalid Subreddit!")
     except (praw.exceptions.PRAWException, prawcore.exceptions.PrawcoreException) as e:
         print(">> ERROR: Reddit API Error - " + e)
+    except:
+        pass
 
     print(f"\n > Found {imageCount} image(s).")
     if imageCount > 0:
