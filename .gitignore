@@ -4,3 +4,4 @@ savedscrapes/
 __pycache__/
 data/__pycache__/
 data/creds.txt
+.vscode/launch.json
